@@ -2,10 +2,11 @@ import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 
 const NAV = [
-  { path: '/dashboard',    label: 'DASHBOARD',  icon: '⊞' },
-  { path: '/soldiers',     label: 'SOLDIERS',   icon: '◉' },
+  { path: '/dashboard',      label: 'DASHBOARD',  icon: '⊞' },
+  { path: '/soldiers',       label: 'SOLDIERS',   icon: '◉' },
   { path: '/counseling/new', label: 'COUNSELING', icon: '◈' },
-  { path: '/ask-sgm',      label: 'ASK THE SGM', icon: '◇' },
+  { path: '/ncoer',          label: 'NCOER',      icon: '★' },
+  { path: '/ask-sgm',        label: 'ASK THE SGM', icon: '◇' },
 ];
 
 export default function Layout({ children }: { children: React.ReactNode }) {

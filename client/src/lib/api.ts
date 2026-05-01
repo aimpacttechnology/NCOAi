@@ -29,6 +29,36 @@ export async function generateCounseling(
   }
 }
 
+export async function generateNCOER(
+  payload: {
+    soldier: { name: string; rank: string };
+    position: string;
+    unit: string;
+    ratingPeriod: { from: string; to: string };
+    accomplishments: string;
+    sections: string[];
+  },
+  onChunk: (text: string) => void
+): Promise<void> {
+  const res = await fetch('/api/ncoer/generate', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  });
+
+  if (!res.ok) throw new Error(`Server error ${res.status}`);
+
+  const reader = res.body?.getReader();
+  if (!reader) throw new Error('No response stream');
+
+  const decoder = new TextDecoder();
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    onChunk(decoder.decode(value, { stream: true }));
+  }
+}
+
 export async function askSGM(
   payload: {
     message: string;
