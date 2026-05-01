@@ -49,12 +49,24 @@ export default function Layout({ children }: { children: React.ReactNode }) {
           })}
         </nav>
 
-        <div className="px-3 py-4 border-t border-border">
+        <div className="px-3 py-4 border-t border-border space-y-0.5">
+          <Link
+            to="/profile"
+            className={`flex items-center gap-3 px-3 py-2 font-mono text-xs tracking-wider transition-colors ${
+              location.pathname === '/profile'
+                ? 'bg-army-tan text-army-text'
+                : 'text-army-muted hover:bg-[#21262d] hover:text-army-text'
+            }`}
+          >
+            <span className="text-base leading-none">⚙</span>
+            PROFILE
+          </Link>
           <button
             onClick={handleLogout}
-            className="w-full text-left px-3 py-2 font-mono text-xs tracking-wider text-army-muted hover:text-danger transition-colors"
+            className="w-full text-left flex items-center gap-3 px-3 py-2 font-mono text-xs tracking-wider text-army-muted hover:text-danger transition-colors"
           >
-            ⏻  LOGOUT
+            <span className="text-base leading-none">⏻</span>
+            LOGOUT
           </button>
         </div>
       </aside>
