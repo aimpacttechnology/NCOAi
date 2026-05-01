@@ -12,6 +12,11 @@ interface Soldier {
   mos: string | null;
 }
 
+interface CustomPoint {
+  label: string;
+  points: number;
+}
+
 interface PromotionData {
   id?: string;
   soldier_id: string;
@@ -28,6 +33,7 @@ interface PromotionData {
   degree: string;
   college_credits: number;
   extra_courses: number;
+  custom_points: CustomPoint[];
 }
 
 // ─── Constants ────────────────────────────────────────────────────────────────
@@ -46,12 +52,12 @@ const AWARDS_CATALOG: { key: string; label: string; points: number }[] = [
 const DEGREES = ['None', 'Some College', 'Associate', 'Bachelor', 'Master or higher'];
 
 const PREREQS: Record<string, { tis: number; tig: number; wlc: boolean; alc: boolean; slc: boolean }> = {
-  SGT: { tis: 18,  tig: 8,  wlc: true,  alc: false, slc: false },
-  SSG: { tis: 48,  tig: 12, wlc: true,  alc: false, slc: false },
-  SFC: { tis: 84,  tig: 36, wlc: true,  alc: true,  slc: false },
-  MSG: { tis: 144, tig: 36, wlc: true,  alc: true,  slc: true  },
-  '1SG':{ tis: 144,tig: 36, wlc: true,  alc: true,  slc: true  },
-  SGM: { tis: 192, tig: 36, wlc: true,  alc: true,  slc: true  },
+  SGT:  { tis: 18,  tig: 8,  wlc: true,  alc: false, slc: false },
+  SSG:  { tis: 48,  tig: 12, wlc: true,  alc: false, slc: false },
+  SFC:  { tis: 84,  tig: 36, wlc: true,  alc: true,  slc: false },
+  MSG:  { tis: 144, tig: 36, wlc: true,  alc: true,  slc: true  },
+  '1SG':{ tis: 144, tig: 36, wlc: true,  alc: true,  slc: true  },
+  SGM:  { tis: 192, tig: 36, wlc: true,  alc: true,  slc: true  },
 };
 
 // ─── Score engine ─────────────────────────────────────────────────────────────
@@ -65,15 +71,13 @@ function calcScore(d: PromotionData) {
   };
 
   // Military Training
-  const acftPts  = Math.min(60, Math.floor(d.acft_score / 10));
-  const weapPts  = { Expert: 40, Sharpshooter: 30, Marksman: 15, Unqualified: 0 }[d.weapons_qual] ?? 0;
+  const acftPts = Math.min(60, Math.floor(d.acft_score / 10));
+  const weapPts = ({ Expert: 40, Sharpshooter: 30, Marksman: 15, Unqualified: 0, 'N/A': 0 } as Record<string, number>)[d.weapons_qual] ?? 0;
   breakdown['Military Training'].earned = Math.min(100, acftPts + weapPts);
 
   // Awards
   let awardTotal = 0;
-  for (const a of AWARDS_CATALOG) {
-    awardTotal += (d.awards[a.key] ?? 0) * a.points;
-  }
+  for (const a of AWARDS_CATALOG) awardTotal += (d.awards[a.key] ?? 0) * a.points;
   breakdown['Awards'].earned = Math.min(125, awardTotal);
 
   // Military Education
@@ -82,14 +86,22 @@ function calcScore(d: PromotionData) {
   breakdown['Military Education'].earned = Math.min(200, eduPts);
 
   // Civilian Education
-  const degPts = { None: 0, 'Some College': 10, Associate: 40, Bachelor: 75, 'Master or higher': 75 }[d.degree] ?? 0;
+  const degPts = ({ None: 0, 'Some College': 10, Associate: 40, Bachelor: 75, 'Master or higher': 75 } as Record<string, number>)[d.degree] ?? 0;
   const creditPts = Math.min(25, Math.floor(d.college_credits * 0.5));
   breakdown['Civilian Education'].earned = Math.min(75, Math.max(degPts, creditPts));
 
-  const total   = Object.values(breakdown).reduce((s, v) => s + v.earned, 0);
-  const maxScore = Object.values(breakdown).reduce((s, v) => s + v.max, 0); // 500
+  // Custom categories — each entry is its own row in the breakdown
+  const custom = d.custom_points ?? [];
+  for (const c of custom) {
+    if (c.label.trim()) {
+      breakdown[c.label] = { earned: c.points, max: c.points };
+    }
+  }
 
-  // Prerequisites check
+  const total    = Object.values(breakdown).reduce((s, v) => s + v.earned, 0);
+  const maxScore = Object.values(breakdown).reduce((s, v) => s + v.max,    0);
+
+  // Prerequisites
   const req = PREREQS[d.target_rank];
   const gaps: string[] = [];
   if (req) {
@@ -101,16 +113,16 @@ function calcScore(d: PromotionData) {
   }
   const prereqsMet = gaps.length === 0;
 
-  const pct = total / maxScore;
+  const pct = maxScore > 0 ? total / maxScore : 0;
   let status: 'GREEN' | 'AMBER' | 'RED';
-  if (!prereqsMet || pct < 0.4)      status = 'RED';
-  else if (pct < 0.65)               status = 'AMBER';
-  else                               status = 'GREEN';
+  if (!prereqsMet || pct < 0.4) status = 'RED';
+  else if (pct < 0.65)          status = 'AMBER';
+  else                          status = 'GREEN';
 
   return { total, maxScore, breakdown, status, gaps, prereqsMet };
 }
 
-// ─── Blank form factory ───────────────────────────────────────────────────────
+// ─── Helpers ──────────────────────────────────────────────────────────────────
 
 function blankForm(soldier_id: string, nco_id: string): PromotionData {
   return {
@@ -120,16 +132,15 @@ function blankForm(soldier_id: string, nco_id: string): PromotionData {
     acft_score: 0, weapons_qual: 'Unqualified',
     wlc_complete: false, alc_complete: false, slc_complete: false,
     awards: {}, degree: 'None', college_credits: 0, extra_courses: 0,
+    custom_points: [],
   };
 }
-
-// ─── Status badge ─────────────────────────────────────────────────────────────
 
 function StatusBadge({ status }: { status: 'GREEN' | 'AMBER' | 'RED' }) {
   const styles = {
     GREEN: 'bg-green-900 text-green-300 border-green-700',
     AMBER: 'bg-yellow-900 text-yellow-300 border-yellow-700',
-    RED:   'bg-red-900   text-danger      border-danger',
+    RED:   'bg-red-900 text-danger border-danger',
   };
   return (
     <span className={`font-mono text-[10px] tracking-widest uppercase px-2 py-0.5 border ${styles[status]}`}>
@@ -138,18 +149,22 @@ function StatusBadge({ status }: { status: 'GREEN' | 'AMBER' | 'RED' }) {
   );
 }
 
-// ─── Main component ───────────────────────────────────────────────────────────
+// ─── Main ─────────────────────────────────────────────────────────────────────
 
 export default function PromotionReadiness() {
-  const [soldiers, setSoldiers] = useState<Soldier[]>([]);
-  const [promoMap, setPromoMap] = useState<Record<string, PromotionData>>({});
-  const [selected, setSelected] = useState<Soldier | null>(null);
-  const [form, setForm] = useState<PromotionData | null>(null);
-  const [saving, setSaving] = useState(false);
-  const [advice, setAdvice] = useState('');
-  const [advising, setAdvising] = useState(false);
-  const [userId, setUserId] = useState('');
-  const [loading, setLoading] = useState(true);
+  const [soldiers, setSoldiers]   = useState<Soldier[]>([]);
+  const [promoMap, setPromoMap]   = useState<Record<string, PromotionData>>({});
+  const [selected, setSelected]   = useState<Soldier | null>(null);
+  const [form, setForm]           = useState<PromotionData | null>(null);
+  const [saving, setSaving]       = useState(false);
+  const [advice, setAdvice]       = useState('');
+  const [advising, setAdvising]   = useState(false);
+  const [userId, setUserId]       = useState('');
+  const [loading, setLoading]     = useState(true);
+
+  // Custom category input state
+  const [newLabel,  setNewLabel]  = useState('');
+  const [newPoints, setNewPoints] = useState('');
 
   useEffect(() => {
     const load = async () => {
@@ -165,7 +180,9 @@ export default function PromotionReadiness() {
       if (soldiersData) setSoldiers(soldiersData);
       if (promoData) {
         const map: Record<string, PromotionData> = {};
-        promoData.forEach((p: PromotionData) => { map[p.soldier_id] = p; });
+        promoData.forEach((p: PromotionData) => {
+          map[p.soldier_id] = { ...p, custom_points: p.custom_points ?? [] };
+        });
         setPromoMap(map);
       }
       setLoading(false);
@@ -176,8 +193,10 @@ export default function PromotionReadiness() {
   const openSoldier = (s: Soldier) => {
     setSelected(s);
     setAdvice('');
+    setNewLabel('');
+    setNewPoints('');
     const existing = promoMap[s.id];
-    setForm(existing ?? blankForm(s.id, userId));
+    setForm(existing ? { ...existing, custom_points: existing.custom_points ?? [] } : blankForm(s.id, userId));
   };
 
   const handleSave = async () => {
@@ -190,8 +209,9 @@ export default function PromotionReadiness() {
       : await supabase.from('promotion_data').insert(payload).select().single();
 
     if (!error && data) {
-      setForm(data);
-      setPromoMap(m => ({ ...m, [form.soldier_id]: data }));
+      const saved = { ...data, custom_points: data.custom_points ?? [] };
+      setForm(saved);
+      setPromoMap(m => ({ ...m, [form.soldier_id]: saved }));
     }
     setSaving(false);
   };
@@ -201,7 +221,6 @@ export default function PromotionReadiness() {
     const { total, maxScore, breakdown, status, gaps, prereqsMet } = calcScore(form);
     setAdvice('');
     setAdvising(true);
-
     try {
       await getPromotionAdvice(
         {
@@ -225,7 +244,19 @@ export default function PromotionReadiness() {
   const setAward = (key: string, count: number) =>
     setForm(f => f ? { ...f, awards: { ...f.awards, [key]: count } } : f);
 
+  const addCustom = () => {
+    const pts = parseInt(newPoints, 10);
+    if (!newLabel.trim() || isNaN(pts) || pts < 0) return;
+    setForm(f => f ? { ...f, custom_points: [...(f.custom_points ?? []), { label: newLabel.trim(), points: pts }] } : f);
+    setNewLabel('');
+    setNewPoints('');
+  };
+
+  const removeCustom = (i: number) =>
+    setForm(f => f ? { ...f, custom_points: f.custom_points.filter((_, idx) => idx !== i) } : f);
+
   const scoreData = form ? calcScore(form) : null;
+  const fixedCategories = ['Military Training', 'Awards', 'Military Education', 'Civilian Education'];
 
   return (
     <div className="flex h-full">
@@ -235,44 +266,27 @@ export default function PromotionReadiness() {
           <div className="font-mono text-[10px] tracking-widest text-army-muted uppercase">Phase 2</div>
           <div className="font-mono text-sm font-bold text-army-text mt-0.5">Promotion Readiness</div>
         </div>
-
         <div className="flex-1 overflow-y-auto py-2">
           {loading ? (
             <div className="px-5 py-4 font-mono text-xs text-army-muted">Loading...</div>
           ) : soldiers.length === 0 ? (
             <div className="px-5 py-4 font-mono text-xs text-army-muted">No soldiers on roster.</div>
-          ) : (
-            soldiers.map(s => {
-              const existing = promoMap[s.id];
-              const sc = existing ? calcScore(existing) : null;
-              const isActive = selected?.id === s.id;
-              return (
-                <button
-                  key={s.id}
-                  onClick={() => openSoldier(s)}
-                  className={`w-full text-left px-5 py-3 border-b border-border transition-colors ${
-                    isActive ? 'bg-army-tan' : 'hover:bg-[#21262d]'
-                  }`}
-                >
-                  <div className="font-mono text-xs font-bold text-army-text">
-                    {s.rank} {s.last_name}, {s.first_name}
-                  </div>
-                  <div className="flex items-center gap-2 mt-1">
-                    {sc ? (
-                      <>
-                        <StatusBadge status={sc.status} />
-                        <span className="font-mono text-[10px] text-army-muted">
-                          {sc.total}/{sc.maxScore} pts
-                        </span>
-                      </>
-                    ) : (
-                      <span className="font-mono text-[10px] text-army-muted">Not assessed</span>
-                    )}
-                  </div>
-                </button>
-              );
-            })
-          )}
+          ) : soldiers.map(s => {
+            const sc = promoMap[s.id] ? calcScore(promoMap[s.id]) : null;
+            return (
+              <button key={s.id} onClick={() => openSoldier(s)}
+                className={`w-full text-left px-5 py-3 border-b border-border transition-colors ${selected?.id === s.id ? 'bg-army-tan' : 'hover:bg-[#21262d]'}`}>
+                <div className="font-mono text-xs font-bold text-army-text">{s.rank} {s.last_name}, {s.first_name}</div>
+                <div className="flex items-center gap-2 mt-1">
+                  {sc ? (
+                    <><StatusBadge status={sc.status} /><span className="font-mono text-[10px] text-army-muted">{sc.total}/{sc.maxScore} pts</span></>
+                  ) : (
+                    <span className="font-mono text-[10px] text-army-muted">Not assessed</span>
+                  )}
+                </div>
+              </button>
+            );
+          })}
         </div>
       </div>
 
@@ -290,9 +304,7 @@ export default function PromotionReadiness() {
             {/* Header */}
             <div className="flex items-start justify-between mb-6">
               <div>
-                <div className="font-mono text-army-gold text-lg font-bold">
-                  {selected.rank} {selected.last_name}, {selected.first_name}
-                </div>
+                <div className="font-mono text-army-gold text-lg font-bold">{selected.rank} {selected.last_name}, {selected.first_name}</div>
                 <div className="font-mono text-xs text-army-muted mt-0.5">MOS: {selected.mos || '—'}</div>
               </div>
               {scoreData && (
@@ -306,35 +318,29 @@ export default function PromotionReadiness() {
               )}
             </div>
 
-            {/* Score breakdown bar */}
+            {/* Score breakdown */}
             {scoreData && (
               <div className="bg-surface border border-border p-4 mb-6 space-y-2">
                 {Object.entries(scoreData.breakdown).map(([cat, { earned, max }]) => (
                   <div key={cat}>
                     <div className="flex justify-between font-mono text-[10px] text-army-muted mb-1">
-                      <span>{cat}</span>
+                      <span className={fixedCategories.includes(cat) ? '' : 'text-army-gold'}>{cat}</span>
                       <span>{earned}/{max}</span>
                     </div>
                     <div className="h-1.5 bg-border">
-                      <div
-                        className="h-full bg-army-gold transition-all"
-                        style={{ width: `${Math.round((earned / max) * 100)}%` }}
-                      />
+                      <div className="h-full bg-army-gold transition-all" style={{ width: `${max > 0 ? Math.round((earned / max) * 100) : 0}%` }} />
                     </div>
                   </div>
                 ))}
                 {scoreData.gaps.length > 0 && (
                   <div className="mt-3 pt-3 border-t border-border">
                     <div className="font-mono text-[10px] tracking-widest text-danger uppercase mb-1">Eligibility Gaps</div>
-                    {scoreData.gaps.map((g, i) => (
-                      <div key={i} className="font-mono text-xs text-danger">• {g}</div>
-                    ))}
+                    {scoreData.gaps.map((g, i) => <div key={i} className="font-mono text-xs text-danger">• {g}</div>)}
                   </div>
                 )}
               </div>
             )}
 
-            {/* Form */}
             <div className="space-y-6">
               {/* Target rank + time */}
               <div className="grid grid-cols-3 gap-4">
@@ -347,14 +353,12 @@ export default function PromotionReadiness() {
                 </div>
                 <div>
                   <label className="block font-mono text-[10px] tracking-widest text-army-muted uppercase mb-1">TIS (months)</label>
-                  <input type="number" min={0} value={form.tis_months}
-                    onChange={e => setField('tis_months', +e.target.value)}
+                  <input type="number" min={0} value={form.tis_months} onChange={e => setField('tis_months', +e.target.value)}
                     className="w-full bg-surface border border-border px-3 py-2 font-mono text-sm text-army-text focus:outline-none focus:border-army-tan" />
                 </div>
                 <div>
                   <label className="block font-mono text-[10px] tracking-widest text-army-muted uppercase mb-1">TIG (months)</label>
-                  <input type="number" min={0} value={form.tig_months}
-                    onChange={e => setField('tig_months', +e.target.value)}
+                  <input type="number" min={0} value={form.tig_months} onChange={e => setField('tig_months', +e.target.value)}
                     className="w-full bg-surface border border-border px-3 py-2 font-mono text-sm text-army-text focus:outline-none focus:border-army-tan" />
                 </div>
               </div>
@@ -362,9 +366,7 @@ export default function PromotionReadiness() {
               {/* Physical */}
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block font-mono text-[10px] tracking-widest text-army-muted uppercase mb-1">
-                    ACFT Score <span className="text-army-muted normal-case">(max 600)</span>
-                  </label>
+                  <label className="block font-mono text-[10px] tracking-widest text-army-muted uppercase mb-1">ACFT Score (max 600)</label>
                   <input type="number" min={0} max={600} value={form.acft_score}
                     onChange={e => setField('acft_score', Math.min(600, +e.target.value))}
                     className="w-full bg-surface border border-border px-3 py-2 font-mono text-sm text-army-text focus:outline-none focus:border-army-tan" />
@@ -373,7 +375,7 @@ export default function PromotionReadiness() {
                   <label className="block font-mono text-[10px] tracking-widest text-army-muted uppercase mb-1">Weapons Qualification</label>
                   <select value={form.weapons_qual} onChange={e => setField('weapons_qual', e.target.value)}
                     className="w-full bg-surface border border-border px-3 py-2 font-mono text-sm text-army-text focus:outline-none focus:border-army-tan">
-                    {['Expert', 'Sharpshooter', 'Marksman', 'Unqualified'].map(q => <option key={q}>{q}</option>)}
+                    {['Expert', 'Sharpshooter', 'Marksman', 'Unqualified', 'N/A'].map(q => <option key={q}>{q}</option>)}
                   </select>
                 </div>
               </div>
@@ -382,25 +384,16 @@ export default function PromotionReadiness() {
               <div>
                 <div className="font-mono text-[10px] tracking-widest text-army-muted uppercase mb-2">Military Education</div>
                 <div className="grid grid-cols-2 gap-3">
-                  {[
-                    { key: 'wlc_complete', label: 'WLC Complete' },
-                    { key: 'alc_complete', label: 'ALC Complete' },
-                    { key: 'slc_complete', label: 'SLC Complete' },
-                  ].map(({ key, label }) => (
-                    <button key={key}
-                      onClick={() => setField(key as keyof PromotionData, !form[key as keyof PromotionData] as PromotionData[keyof PromotionData])}
-                      className={`px-3 py-2.5 font-mono text-xs text-left transition-colors border ${
-                        form[key as keyof PromotionData]
-                          ? 'bg-army-tan border-army-tan text-army-text'
-                          : 'bg-surface border-border text-army-muted hover:text-army-text'
-                      }`}>
-                      <span className="mr-2">{form[key as keyof PromotionData] ? '■' : '□'}</span>{label}
+                  {(['wlc_complete', 'alc_complete', 'slc_complete'] as const).map(key => (
+                    <button key={key} onClick={() => setField(key, !form[key])}
+                      className={`px-3 py-2.5 font-mono text-xs text-left transition-colors border ${form[key] ? 'bg-army-tan border-army-tan text-army-text' : 'bg-surface border-border text-army-muted hover:text-army-text'}`}>
+                      <span className="mr-2">{form[key] ? '■' : '□'}</span>
+                      {key === 'wlc_complete' ? 'WLC Complete' : key === 'alc_complete' ? 'ALC Complete' : 'SLC Complete'}
                     </button>
                   ))}
                   <div>
                     <label className="block font-mono text-[10px] tracking-widest text-army-muted uppercase mb-1">Extra Courses</label>
-                    <input type="number" min={0} value={form.extra_courses}
-                      onChange={e => setField('extra_courses', +e.target.value)}
+                    <input type="number" min={0} value={form.extra_courses} onChange={e => setField('extra_courses', +e.target.value)}
                       className="w-full bg-surface border border-border px-3 py-2 font-mono text-sm text-army-text focus:outline-none focus:border-army-tan" />
                   </div>
                 </div>
@@ -418,16 +411,10 @@ export default function PromotionReadiness() {
                       </div>
                       <div className="flex items-center gap-2">
                         <button onClick={() => setAward(a.key, Math.max(0, (form.awards[a.key] ?? 0) - 1))}
-                          className="w-6 h-6 font-mono text-army-muted hover:text-army-text border border-border hover:border-army-tan transition-colors">
-                          −
-                        </button>
-                        <span className="font-mono text-sm text-army-gold w-4 text-center">
-                          {form.awards[a.key] ?? 0}
-                        </span>
+                          className="w-6 h-6 font-mono text-army-muted hover:text-army-text border border-border hover:border-army-tan transition-colors">−</button>
+                        <span className="font-mono text-sm text-army-gold w-4 text-center">{form.awards[a.key] ?? 0}</span>
                         <button onClick={() => setAward(a.key, (form.awards[a.key] ?? 0) + 1)}
-                          className="w-6 h-6 font-mono text-army-muted hover:text-army-text border border-border hover:border-army-tan transition-colors">
-                          +
-                        </button>
+                          className="w-6 h-6 font-mono text-army-muted hover:text-army-text border border-border hover:border-army-tan transition-colors">+</button>
                       </div>
                     </div>
                   ))}
@@ -445,9 +432,58 @@ export default function PromotionReadiness() {
                 </div>
                 <div>
                   <label className="block font-mono text-[10px] tracking-widest text-army-muted uppercase mb-1">College Credits</label>
-                  <input type="number" min={0} value={form.college_credits}
-                    onChange={e => setField('college_credits', +e.target.value)}
+                  <input type="number" min={0} value={form.college_credits} onChange={e => setField('college_credits', +e.target.value)}
                     className="w-full bg-surface border border-border px-3 py-2 font-mono text-sm text-army-text focus:outline-none focus:border-army-tan" />
+                </div>
+              </div>
+
+              {/* ── Custom Scoring Categories ── */}
+              <div>
+                <div className="font-mono text-[10px] tracking-widest text-army-muted uppercase mb-1">Custom Scoring Categories</div>
+                <div className="font-mono text-[10px] text-army-muted mb-3">
+                  Add anything not in the standard list — weapons quals, unit badges, language certs, MOS-specific creds, etc.
+                </div>
+
+                {/* Existing custom entries */}
+                {form.custom_points.length > 0 && (
+                  <div className="space-y-1.5 mb-3">
+                    {form.custom_points.map((c, i) => (
+                      <div key={i} className="flex items-center justify-between bg-surface border border-army-tan px-3 py-2">
+                        <div>
+                          <span className="font-mono text-xs text-army-text">{c.label}</span>
+                          <span className="font-mono text-[10px] text-army-gold ml-2">+{c.points} pts</span>
+                        </div>
+                        <button onClick={() => removeCustom(i)}
+                          className="font-mono text-xs text-army-muted hover:text-danger transition-colors px-2">
+                          ✕
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {/* Add new entry */}
+                <div className="flex gap-2">
+                  <input
+                    value={newLabel}
+                    onChange={e => setNewLabel(e.target.value)}
+                    onKeyDown={e => e.key === 'Enter' && addCustom()}
+                    placeholder="Category name (e.g. Pistol Qual - Expert)"
+                    className="flex-1 bg-surface border border-border px-3 py-2 font-mono text-sm text-army-text placeholder-army-muted focus:outline-none focus:border-army-tan"
+                  />
+                  <input
+                    type="number"
+                    min={0}
+                    value={newPoints}
+                    onChange={e => setNewPoints(e.target.value)}
+                    onKeyDown={e => e.key === 'Enter' && addCustom()}
+                    placeholder="Pts"
+                    className="w-20 bg-surface border border-border px-3 py-2 font-mono text-sm text-army-text placeholder-army-muted focus:outline-none focus:border-army-tan"
+                  />
+                  <button onClick={addCustom} disabled={!newLabel.trim() || !newPoints}
+                    className="bg-army-tan hover:bg-[#9e8562] disabled:opacity-40 text-army-text font-mono text-xs tracking-widest uppercase px-4 py-2 transition-colors">
+                    + ADD
+                  </button>
                 </div>
               </div>
 
@@ -472,9 +508,7 @@ export default function PromotionReadiness() {
                 </div>
                 <div className="font-mono text-sm text-army-text whitespace-pre-wrap leading-relaxed">
                   {advice}
-                  {advising && (
-                    <span className="inline-block w-2 h-4 bg-army-gold ml-0.5 animate-pulse align-text-bottom" />
-                  )}
+                  {advising && <span className="inline-block w-2 h-4 bg-army-gold ml-0.5 animate-pulse align-text-bottom" />}
                 </div>
               </div>
             )}
