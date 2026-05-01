@@ -6,6 +6,7 @@ const NAV = [
   { path: '/soldiers',       label: 'SOLDIERS',   icon: '◉' },
   { path: '/counseling/new', label: 'COUNSELING', icon: '◈' },
   { path: '/ncoer',          label: 'NCOER',      icon: '★' },
+  { path: '/promotion',      label: 'PROMOTION',   icon: '▲' },
   { path: '/ask-sgm',        label: 'ASK THE SGM', icon: '◇' },
 ];
 

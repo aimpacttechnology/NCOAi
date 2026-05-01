@@ -4,6 +4,7 @@ import dotenv from 'dotenv';
 import counselingRouter from './routes/counseling';
 import sgmRouter from './routes/sgm';
 import ncoerRouter from './routes/ncoer';
+import promotionRouter from './routes/promotion';
 
 dotenv.config();
 
@@ -16,6 +17,7 @@ app.use(express.json({ limit: '2mb' }));
 app.use('/api/counseling', counselingRouter);
 app.use('/api/sgm', sgmRouter);
 app.use('/api/ncoer', ncoerRouter);
+app.use('/api/promotion', promotionRouter);
 
 app.get('/health', (_req, res) => res.json({ status: 'ok', ts: Date.now() }));
 
