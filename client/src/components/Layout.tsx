@@ -5,9 +5,12 @@ const NAV = [
   { path: '/dashboard',      label: 'DASHBOARD',  icon: '⊞' },
   { path: '/soldiers',       label: 'SOLDIERS',   icon: '◉' },
   { path: '/counseling/new', label: 'COUNSELING', icon: '◈' },
-  { path: '/ncoer',          label: 'NCOER',      icon: '★' },
+  { path: '/ncoer',          label: 'NCOER',       icon: '★' },
   { path: '/promotion',      label: 'PROMOTION',   icon: '▲' },
-  { path: '/ask-sgm',        label: 'ASK THE SGM', icon: '◇' },
+  { path: '/mentorship',     label: 'MENTORSHIP',  icon: '◆' },
+  { path: '/plans',          label: 'DEV PLANS',   icon: '▣' },
+  { path: '/journal',        label: 'JOURNAL',     icon: '◇' },
+  { path: '/ask-sgm',        label: 'ASK THE SGM', icon: '⊕' },
 ];
 
 export default function Layout({ children }: { children: React.ReactNode }) {

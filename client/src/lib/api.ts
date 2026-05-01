@@ -1,3 +1,29 @@
+async function stream(url: string, payload: unknown, onChunk: (t: string) => void) {
+  const res = await fetch(url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  });
+  if (!res.ok) throw new Error(`Server error ${res.status}`);
+  const reader = res.body?.getReader();
+  if (!reader) throw new Error('No stream');
+  const dec = new TextDecoder();
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    onChunk(dec.decode(value, { stream: true }));
+  }
+}
+
+export const prepareMentorship = (p: unknown, cb: (t: string) => void) =>
+  stream('/api/mentorship/prepare', p, cb);
+
+export const generateDevelopmentPlan = (p: unknown, cb: (t: string) => void) =>
+  stream('/api/development/generate', p, cb);
+
+export const assistJournal = (p: unknown, cb: (t: string) => void) =>
+  stream('/api/journal/assist', p, cb);
+
 export async function getPromotionAdvice(
   payload: Record<string, unknown>,
   onChunk: (text: string) => void

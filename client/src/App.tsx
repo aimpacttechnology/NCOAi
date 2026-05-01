@@ -12,6 +12,9 @@ import AskSGM from './pages/AskSGM';
 import NCOERGenerator from './pages/NCOERGenerator';
 import PromotionReadiness from './pages/PromotionReadiness';
 import Profile from './pages/Profile';
+import MentorshipWizard from './pages/MentorshipWizard';
+import DevelopmentPlans from './pages/DevelopmentPlans';
+import WisdomJournal from './pages/WisdomJournal';
 
 function Protected({ user, children }: { user: User | null; children: React.ReactNode }) {
   if (!user) return <Navigate to="/login" replace />;
@@ -55,6 +58,9 @@ export default function App() {
         <Route path="/ncoer" element={<Protected user={user}><NCOERGenerator /></Protected>} />
         <Route path="/promotion" element={<Protected user={user}><PromotionReadiness /></Protected>} />
         <Route path="/profile" element={<Protected user={user}><Profile /></Protected>} />
+        <Route path="/mentorship" element={<Protected user={user}><MentorshipWizard /></Protected>} />
+        <Route path="/plans" element={<Protected user={user}><DevelopmentPlans /></Protected>} />
+        <Route path="/journal" element={<Protected user={user}><WisdomJournal /></Protected>} />
         <Route path="*" element={<Navigate to={user ? '/dashboard' : '/login'} replace />} />
       </Routes>
     </BrowserRouter>
