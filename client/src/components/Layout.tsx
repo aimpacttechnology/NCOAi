@@ -8,6 +8,8 @@ const NAV = [
   { path: '/ncoer',          label: 'NCOER',       icon: '★' },
   { path: '/promotion',      label: 'PROMOTION',   icon: '▲' },
   { path: '/tasks',          label: 'TASKS',       icon: '☑' },
+  { path: '/unit-gaps',      label: 'UNIT GAPS',   icon: '◎' },
+  { path: '/awards',         label: 'DA 638',      icon: '✦' },
   { path: '/mentorship',     label: 'MENTORSHIP',  icon: '◆' },
   { path: '/plans',          label: 'DEV PLANS',   icon: '▣' },
   { path: '/journal',        label: 'JOURNAL',     icon: '◇' },

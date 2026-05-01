@@ -16,6 +16,8 @@ import MentorshipWizard from './pages/MentorshipWizard';
 import DevelopmentPlans from './pages/DevelopmentPlans';
 import WisdomJournal from './pages/WisdomJournal';
 import Tasks from './pages/Tasks';
+import UnitGapAnalysis from './pages/UnitGapAnalysis';
+import AwardWizard from './pages/AwardWizard';
 
 function Protected({ user, children }: { user: User | null; children: React.ReactNode }) {
   if (!user) return <Navigate to="/login" replace />;
@@ -63,6 +65,8 @@ export default function App() {
         <Route path="/plans" element={<Protected user={user}><DevelopmentPlans /></Protected>} />
         <Route path="/journal" element={<Protected user={user}><WisdomJournal /></Protected>} />
         <Route path="/tasks" element={<Protected user={user}><Tasks /></Protected>} />
+        <Route path="/unit-gaps" element={<Protected user={user}><UnitGapAnalysis /></Protected>} />
+        <Route path="/awards" element={<Protected user={user}><AwardWizard /></Protected>} />
         <Route path="*" element={<Navigate to={user ? '/dashboard' : '/login'} replace />} />
       </Routes>
     </BrowserRouter>

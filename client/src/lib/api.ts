@@ -15,8 +15,14 @@ async function stream(url: string, payload: unknown, onChunk: (t: string) => voi
   }
 }
 
-export const prepareMentorship = (p: unknown, cb: (t: string) => void) =>
+export const prepareMentorship    = (p: unknown, cb: (t: string) => void) =>
   stream('/api/mentorship/prepare', p, cb);
+
+export const analyzeUnitGaps      = (p: unknown, cb: (t: string) => void) =>
+  stream('/api/training/gaps', p, cb);
+
+export const generateAwardRec     = (p: unknown, cb: (t: string) => void) =>
+  stream('/api/awards/generate', p, cb);
 
 export const generateDevelopmentPlan = (p: unknown, cb: (t: string) => void) =>
   stream('/api/development/generate', p, cb);
