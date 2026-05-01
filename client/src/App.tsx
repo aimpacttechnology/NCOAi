@@ -15,6 +15,7 @@ import Profile from './pages/Profile';
 import MentorshipWizard from './pages/MentorshipWizard';
 import DevelopmentPlans from './pages/DevelopmentPlans';
 import WisdomJournal from './pages/WisdomJournal';
+import Tasks from './pages/Tasks';
 
 function Protected({ user, children }: { user: User | null; children: React.ReactNode }) {
   if (!user) return <Navigate to="/login" replace />;
@@ -61,6 +62,7 @@ export default function App() {
         <Route path="/mentorship" element={<Protected user={user}><MentorshipWizard /></Protected>} />
         <Route path="/plans" element={<Protected user={user}><DevelopmentPlans /></Protected>} />
         <Route path="/journal" element={<Protected user={user}><WisdomJournal /></Protected>} />
+        <Route path="/tasks" element={<Protected user={user}><Tasks /></Protected>} />
         <Route path="*" element={<Navigate to={user ? '/dashboard' : '/login'} replace />} />
       </Routes>
     </BrowserRouter>

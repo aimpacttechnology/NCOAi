@@ -7,6 +7,7 @@ const NAV = [
   { path: '/counseling/new', label: 'COUNSELING', icon: '◈' },
   { path: '/ncoer',          label: 'NCOER',       icon: '★' },
   { path: '/promotion',      label: 'PROMOTION',   icon: '▲' },
+  { path: '/tasks',          label: 'TASKS',       icon: '☑' },
   { path: '/mentorship',     label: 'MENTORSHIP',  icon: '◆' },
   { path: '/plans',          label: 'DEV PLANS',   icon: '▣' },
   { path: '/journal',        label: 'JOURNAL',     icon: '◇' },

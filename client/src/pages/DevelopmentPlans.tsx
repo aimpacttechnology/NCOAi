@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { supabase } from '../lib/supabase';
 import { generateDevelopmentPlan } from '../lib/api';
 import { calcScore, type PromotionData } from '../lib/promotionScore';
+import { exportToPDF } from '../lib/exportPDF';
 
 interface Soldier { id: string; first_name: string; last_name: string; rank: string }
 interface Counseling { id: string; type: string; generated_output: string | null; created_at: string }
@@ -216,6 +217,16 @@ export default function DevelopmentPlans() {
                   {' · '}<span className={selected.status === 'active' ? 'text-green-400' : 'text-army-muted'}>{selected.status.toUpperCase()}</span>
                 </div>
               </div>
+              <button
+                onClick={() => exportToPDF({
+                  type: 'development-plan',
+                  soldier: { name: `${selected.soldiers?.last_name}`, rank: selected.soldiers?.rank ?? '' },
+                  subtitle: PLAN_LABELS[selected.plan_type]?.label,
+                  content: selected.ai_plan ?? '',
+                })}
+                className="border border-border text-army-muted hover:text-army-text font-mono text-xs tracking-widest uppercase px-4 py-1.5 transition-colors">
+                ↓ PDF
+              </button>
             </div>
             <div className="bg-surface border border-border p-6">
               <div className="font-mono text-sm text-army-text whitespace-pre-wrap leading-relaxed">
@@ -309,10 +320,26 @@ export default function DevelopmentPlans() {
             )}
 
             {!generating && output && (
-              <button onClick={handleSave} disabled={saving}
-                className="bg-army-tan hover:bg-[#9e8562] disabled:opacity-50 text-army-text font-mono text-xs tracking-widest uppercase px-6 py-2.5 transition-colors">
-                {saving ? 'SAVING...' : 'SAVE PLAN'}
-              </button>
+              <div className="flex gap-3">
+                <button onClick={handleSave} disabled={saving}
+                  className="bg-army-tan hover:bg-[#9e8562] disabled:opacity-50 text-army-text font-mono text-xs tracking-widest uppercase px-6 py-2.5 transition-colors">
+                  {saving ? 'SAVING...' : 'SAVE PLAN'}
+                </button>
+                <button
+                  onClick={() => {
+                    const sol = soldiers.find(s => s.id === form.soldier_id);
+                    if (!sol) return;
+                    exportToPDF({
+                      type: 'development-plan',
+                      soldier: { name: `${sol.first_name} ${sol.last_name}`, rank: sol.rank },
+                      subtitle: PLAN_LABELS[form.plan_type]?.label,
+                      content: output,
+                    });
+                  }}
+                  className="border border-border text-army-muted hover:text-army-text font-mono text-xs tracking-widest uppercase px-5 py-2.5 transition-colors">
+                  ↓ PDF
+                </button>
+              </div>
             )}
           </div>
         )}

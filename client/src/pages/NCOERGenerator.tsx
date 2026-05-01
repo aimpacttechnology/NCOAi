@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '../lib/supabase';
 import { generateNCOER } from '../lib/api';
+import { exportToPDF } from '../lib/exportPDF';
 
 interface Soldier {
   id: string;
@@ -366,20 +367,33 @@ export default function NCOERGenerator() {
           </div>
 
           {!generating && output && (
-            <button
-              onClick={() => {
-                const blob = new Blob([output], { type: 'text/plain' });
-                const url = URL.createObjectURL(blob);
-                const a = document.createElement('a');
-                a.href = url;
-                a.download = `ncoer-${soldierPayload?.name?.replace(/\s/g, '-') ?? 'bullets'}-${new Date().toISOString().split('T')[0]}.txt`;
-                a.click();
-                URL.revokeObjectURL(url);
-              }}
-              className="border border-army-gold text-army-gold hover:bg-army-gold hover:text-bg font-mono text-xs tracking-widest uppercase px-5 py-2.5 transition-colors"
-            >
-              ↓ DOWNLOAD .TXT
-            </button>
+            <div className="flex gap-3">
+              <button
+                onClick={() => exportToPDF({
+                  type: 'ncoer',
+                  soldier: { name: soldierPayload?.name ?? '', rank: soldierPayload?.rank ?? '' },
+                  subtitle: type,
+                  content: output,
+                })}
+                className="bg-army-tan hover:bg-[#9e8562] text-army-text font-mono text-xs tracking-widest uppercase px-5 py-2.5 transition-colors"
+              >
+                ↓ DOWNLOAD PDF
+              </button>
+              <button
+                onClick={() => {
+                  const blob = new Blob([output], { type: 'text/plain' });
+                  const url = URL.createObjectURL(blob);
+                  const a = document.createElement('a');
+                  a.href = url;
+                  a.download = `ncoer-${soldierPayload?.name?.replace(/\s/g, '-') ?? 'bullets'}-${new Date().toISOString().split('T')[0]}.txt`;
+                  a.click();
+                  URL.revokeObjectURL(url);
+                }}
+                className="border border-border text-army-muted hover:text-army-text font-mono text-xs tracking-widest uppercase px-5 py-2.5 transition-colors"
+              >
+                ↓ .TXT
+              </button>
+            </div>
           )}
         </div>
       )}
