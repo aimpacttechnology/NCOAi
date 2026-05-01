@@ -1,0 +1,26 @@
+node_modules/
+*/node_modules/
+dist/
+*/dist/
+client/dist/
+
+# Real env files — never commit these
+.env
+.env.local
+.env.*
+server/.env
+client/.env
+
+# Reference materials (large PDFs / PowerPoints — keep local only)
+Books/
+Training/
+ALC/
+
+# Claude Code internal
+.claude/
+
+# OS / editor
+.DS_Store
+Thumbs.db
+.vscode/
+*.log
