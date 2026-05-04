@@ -7,6 +7,7 @@ const NAV = [
   { path: '/counseling/new', label: 'COUNSELING', icon: '◈' },
   { path: '/ncoer',          label: 'NCOER',       icon: '★' },
   { path: '/promotion',      label: 'PROMOTION',   icon: '▲' },
+  { path: '/training',       label: 'TRAINING',    icon: '▣' },
   { path: '/tasks',          label: 'TASKS',       icon: '☑' },
   { path: '/unit-gaps',      label: 'UNIT GAPS',   icon: '◎' },
   { path: '/awards',         label: 'DA 638',      icon: '✦' },

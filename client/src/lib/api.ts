@@ -21,6 +21,12 @@ export const prepareMentorship    = (p: unknown, cb: (t: string) => void) =>
 export const analyzeUnitGaps      = (p: unknown, cb: (t: string) => void) =>
   stream('/api/training/gaps', p, cb);
 
+export const generateTrainingPlan = (p: unknown, cb: (t: string) => void) =>
+  stream('/api/training/plan', p, cb);
+
+export const generateLessonPlan   = (p: unknown, cb: (t: string) => void) =>
+  stream('/api/training/lesson', p, cb);
+
 export const generateAwardRec     = (p: unknown, cb: (t: string) => void) =>
   stream('/api/awards/generate', p, cb);
 
