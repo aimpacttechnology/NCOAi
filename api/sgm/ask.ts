@@ -72,58 +72,58 @@ export default async function handler(req: Request) {
     });
   }
 
-  // Run RAG lookup and Claude stream setup in parallel
-  const [{ context, sources }, anthropic] = await Promise.all([
-    getDocContext(message),
-    Promise.resolve(new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })),
-  ]);
+  try {
+    const [{ context, sources }, anthropic] = await Promise.all([
+      getDocContext(message),
+      Promise.resolve(new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })),
+    ]);
 
-  let systemPrompt = SGM_BASE;
-  if (context) {
-    systemPrompt += `\n\n---\nRELEVANT DOCTRINE FROM YOUR INDEXED LIBRARY:\n\n${context}\n\n---\nGround your response in these passages where applicable. Reference the source document by name when citing them.`;
-  }
+    let systemPrompt = SGM_BASE;
+    if (context) {
+      systemPrompt += `\n\n---\nRELEVANT DOCTRINE FROM YOUR INDEXED LIBRARY:\n\n${context}\n\n---\nGround your response in these passages where applicable. Reference the source document by name when citing them.`;
+    }
 
-  const encoder = new TextEncoder();
+    const encoder = new TextEncoder();
+    const preamble = sources.length > 0
+      ? `[Searching: ${sources.slice(0, 3).join(', ')}${sources.length > 3 ? '...' : ''}]\n\n`
+      : '';
 
-  // Stream sources header first if RAG found results
-  const preamble = sources.length > 0
-    ? `[Searching: ${sources.slice(0, 3).join(', ')}${sources.length > 3 ? '...' : ''}]\n\n`
-    : '';
+    const readable = new ReadableStream({
+      async start(controller) {
+        try {
+          if (preamble) controller.enqueue(encoder.encode(preamble));
 
-  const readable = new ReadableStream({
-    async start(controller) {
-      try {
-        if (preamble) {
-          controller.enqueue(encoder.encode(preamble));
-        }
+          const stream = anthropic.messages.stream({
+            model: 'claude-sonnet-4-6',
+            max_tokens: 1024,
+            system: systemPrompt,
+            messages: [...history, { role: 'user', content: message }],
+          });
 
-        const stream = anthropic.messages.stream({
-          model: 'claude-sonnet-4-6',
-          max_tokens: 1024,
-          system: systemPrompt,
-          messages: [
-            ...history,
-            { role: 'user', content: message },
-          ],
-        });
-
-        for await (const chunk of stream) {
-          if (chunk.type === 'content_block_delta' && chunk.delta.type === 'text_delta') {
-            controller.enqueue(encoder.encode(chunk.delta.text));
+          for await (const chunk of stream) {
+            if (chunk.type === 'content_block_delta' && chunk.delta.type === 'text_delta') {
+              controller.enqueue(encoder.encode(chunk.delta.text));
+            }
           }
+          controller.close();
+        } catch (err) {
+          controller.error(err);
         }
-        controller.close();
-      } catch (err) {
-        controller.error(err);
-      }
-    },
-  });
+      },
+    });
 
-  return new Response(readable, {
-    headers: {
-      'Content-Type': 'text/plain; charset=utf-8',
-      'Cache-Control': 'no-cache',
-      'X-Accel-Buffering': 'no',
-    },
-  });
+    return new Response(readable, {
+      headers: {
+        'Content-Type': 'text/plain; charset=utf-8',
+        'Cache-Control': 'no-cache',
+        'X-Accel-Buffering': 'no',
+      },
+    });
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err);
+    return new Response(JSON.stringify({ error: message }), {
+      status: 500,
+      headers: { 'Content-Type': 'application/json' },
+    });
+  }
 }
