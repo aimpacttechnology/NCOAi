@@ -3,7 +3,18 @@ import { supabase } from '../lib/supabase';
 import { analyzeUnitGaps } from '../lib/api';
 import { calcScore, type PromotionData } from '../lib/promotionScore';
 import { exportToPDF } from '../lib/exportPDF';
-import type { UnitSummary } from '../../api/training/gaps';
+interface UnitSummary {
+  totalSoldiers: number;
+  assessed: number;
+  promotionReadiness: { green: number; amber: number; red: number };
+  education: { wlcComplete: number; alcComplete: number; slcComplete: number };
+  acft: { below540: number; s540to580: number; above580: number; noData: number };
+  weapons: { expert: number; sharpshooter: number; marksman: number; unqualified: number; na: number };
+  counselingStatus: { current: number; overdueMonths3: number; overdueMonths6: number; never: number };
+  openTasks: number;
+  overdueTasks: number;
+  topGaps: string[];
+}
 
 interface Soldier { id: string; rank: string; first_name: string; last_name: string }
 

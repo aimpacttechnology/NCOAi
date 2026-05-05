@@ -315,7 +315,7 @@ export default function CounselingWizard() {
                 onClick={() => exportToPDF({
                   type: 'counseling',
                   soldier: { name: `${selectedSoldier?.first_name} ${selectedSoldier?.last_name}`, rank: selectedSoldier?.rank ?? '' },
-                  subtitle: `${counselingType} Counseling`,
+                  subtitle: `${type} Counseling`,
                   content: output,
                 })}
                 className="bg-army-tan hover:bg-[#9e8562] text-army-text font-mono text-xs tracking-widest uppercase px-5 py-2.5 transition-colors"

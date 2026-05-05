@@ -372,7 +372,7 @@ export default function NCOERGenerator() {
                 onClick={() => exportToPDF({
                   type: 'ncoer',
                   soldier: { name: soldierPayload?.name ?? '', rank: soldierPayload?.rank ?? '' },
-                  subtitle: type,
+                  subtitle: 'NCO Evaluation Report',
                   content: output,
                 })}
                 className="bg-army-tan hover:bg-[#9e8562] text-army-text font-mono text-xs tracking-widest uppercase px-5 py-2.5 transition-colors"
