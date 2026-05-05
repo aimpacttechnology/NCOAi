@@ -4,13 +4,16 @@ VALUES ('doctrine-docs', 'doctrine-docs', false, 52428800, ARRAY['application/pd
 ON CONFLICT (id) DO NOTHING;
 
 -- Allow authenticated users to manage doctrine docs
-CREATE POLICY IF NOT EXISTS "NCO upload doctrine" ON storage.objects
+DROP POLICY IF EXISTS "NCO upload doctrine" ON storage.objects;
+CREATE POLICY "NCO upload doctrine" ON storage.objects
   FOR INSERT TO authenticated WITH CHECK (bucket_id = 'doctrine-docs');
 
-CREATE POLICY IF NOT EXISTS "NCO read doctrine" ON storage.objects
+DROP POLICY IF EXISTS "NCO read doctrine" ON storage.objects;
+CREATE POLICY "NCO read doctrine" ON storage.objects
   FOR SELECT TO authenticated USING (bucket_id = 'doctrine-docs');
 
-CREATE POLICY IF NOT EXISTS "NCO delete doctrine" ON storage.objects
+DROP POLICY IF EXISTS "NCO delete doctrine" ON storage.objects;
+CREATE POLICY "NCO delete doctrine" ON storage.objects
   FOR DELETE TO authenticated USING (bucket_id = 'doctrine-docs');
 
 -- Aggregate function for listing library docs
