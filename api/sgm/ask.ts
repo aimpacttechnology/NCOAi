@@ -1,5 +1,4 @@
 import Anthropic from '@anthropic-ai/sdk';
-import { createClient } from '@supabase/supabase-js';
 
 export const runtime = 'edge';
 
@@ -13,47 +12,6 @@ When answering questions:
 - If unsure, say so and recommend they consult their senior NCO or JAG
 
 You help NCOs make better decisions and never guess at regulations.`;
-
-interface DocChunk {
-  doc_name: string;
-  content: string;
-  similarity: number;
-}
-
-async function getDocContext(message: string): Promise<{ context: string; sources: string[] }> {
-  const voyageKey  = process.env.VOYAGE_API_KEY;
-  const supabaseUrl = process.env.SUPABASE_URL;
-  const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-
-  if (!voyageKey || !supabaseUrl || !supabaseKey) {
-    return { context: '', sources: [] };
-  }
-
-  try {
-    const VoyageAI = (await import('voyageai') as any).default;
-    const voyage   = new VoyageAI({ apiKey: voyageKey });
-    const embedRes = await voyage.embed({ input: [message], model: 'voyage-3-lite' });
-    const embedding = embedRes.data[0].embedding;
-
-    const supabase = createClient(supabaseUrl, supabaseKey);
-    const { data: chunks } = await supabase.rpc('search_doc_chunks', {
-      query_embedding: embedding,
-      match_count: 5,
-      min_similarity: 0.3,
-    });
-
-    if (!chunks || chunks.length === 0) return { context: '', sources: [] };
-
-    const sources = [...new Set((chunks as DocChunk[]).map(c => c.doc_name))] as string[];
-    const context = (chunks as DocChunk[])
-      .map((c, i) => `[Source ${i + 1} — ${c.doc_name}]\n${c.content}`)
-      .join('\n\n');
-
-    return { context, sources };
-  } catch {
-    return { context: '', sources: [] };
-  }
-}
 
 export default async function handler(req: Request) {
   if (req.method !== 'POST') {
@@ -73,30 +31,16 @@ export default async function handler(req: Request) {
   }
 
   try {
-    const [{ context, sources }, anthropic] = await Promise.all([
-      getDocContext(message),
-      Promise.resolve(new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })),
-    ]);
-
-    let systemPrompt = SGM_BASE;
-    if (context) {
-      systemPrompt += `\n\n---\nRELEVANT DOCTRINE FROM YOUR INDEXED LIBRARY:\n\n${context}\n\n---\nGround your response in these passages where applicable. Reference the source document by name when citing them.`;
-    }
-
+    const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
     const encoder = new TextEncoder();
-    const preamble = sources.length > 0
-      ? `[Searching: ${sources.slice(0, 3).join(', ')}${sources.length > 3 ? '...' : ''}]\n\n`
-      : '';
 
     const readable = new ReadableStream({
       async start(controller) {
         try {
-          if (preamble) controller.enqueue(encoder.encode(preamble));
-
           const stream = anthropic.messages.stream({
             model: 'claude-sonnet-4-6',
             max_tokens: 1024,
-            system: systemPrompt,
+            system: SGM_BASE,
             messages: [...history, { role: 'user', content: message }],
           });
 
@@ -120,8 +64,8 @@ export default async function handler(req: Request) {
       },
     });
   } catch (err) {
-    const message = err instanceof Error ? err.message : String(err);
-    return new Response(JSON.stringify({ error: message }), {
+    const msg = err instanceof Error ? err.message : String(err);
+    return new Response(JSON.stringify({ error: msg }), {
       status: 500,
       headers: { 'Content-Type': 'application/json' },
     });
