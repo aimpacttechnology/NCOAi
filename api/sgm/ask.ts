@@ -30,7 +30,7 @@ async function getDocContext(message: string): Promise<{ context: string; source
   }
 
   try {
-    const VoyageAI = (await import('voyageai')).default;
+    const VoyageAI = (await import('voyageai') as any).default;
     const voyage   = new VoyageAI({ apiKey: voyageKey });
     const embedRes = await voyage.embed({ input: [message], model: 'voyage-3-lite' });
     const embedding = embedRes.data[0].embedding;
