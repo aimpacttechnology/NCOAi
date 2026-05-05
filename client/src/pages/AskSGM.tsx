@@ -53,8 +53,8 @@ export default function AskSGM() {
           });
         }
       );
-    } catch {
-      setError('Failed to reach the SGM. Check your server connection.');
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to reach the SGM.');
       setHistory(h => h.slice(0, -1));
     } finally {
       setStreaming(false);

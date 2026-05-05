@@ -130,7 +130,10 @@ export async function askSGM(
     body: JSON.stringify(payload),
   });
 
-  if (!res.ok) throw new Error(`Server error ${res.status}`);
+  if (!res.ok) {
+    const body = await res.text().catch(() => '');
+    throw new Error(`[${res.status}] ${body || 'No response body'}`);
+  }
 
   const reader = res.body?.getReader();
   if (!reader) throw new Error('No response stream');
