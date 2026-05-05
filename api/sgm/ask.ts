@@ -1,6 +1,5 @@
 import Anthropic from '@anthropic-ai/sdk';
 import { createClient } from '@supabase/supabase-js';
-import VoyageAIClient from 'voyageai';
 
 export const runtime = 'edge';
 
@@ -31,7 +30,8 @@ async function getDocContext(message: string): Promise<{ context: string; source
   }
 
   try {
-    const voyage   = new VoyageAIClient({ apiKey: voyageKey });
+    const VoyageAI = (await import('voyageai')).default;
+    const voyage   = new VoyageAI({ apiKey: voyageKey });
     const embedRes = await voyage.embed({ input: [message], model: 'voyage-3-lite' });
     const embedding = embedRes.data[0].embedding;
 
