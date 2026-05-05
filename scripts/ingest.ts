@@ -12,7 +12,7 @@ import * as path from 'path';
 import { fileURLToPath } from 'url';
 import { createClient } from '@supabase/supabase-js';
 import dotenv from 'dotenv';
-import VoyageAIClient from 'voyageai';
+import { VoyageAIClient } from 'voyageai';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
