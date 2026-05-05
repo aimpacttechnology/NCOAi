@@ -53,19 +53,19 @@ export default function DocLibrary() {
     setStatusMsg('');
 
     try {
-      // Step 1: Upload to Supabase Storage
-      const fileName = file.name;
-      const { error: uploadError } = await supabase.storage
-        .from('doctrine-docs')
-        .upload(fileName, file, { upsert: true });
+      // Read file as base64 and send directly to the ingest endpoint
+      const base64 = await new Promise<string>((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => {
+          const dataUrl = reader.result as string;
+          resolve(dataUrl.split(',')[1]);
+        };
+        reader.onerror = reject;
+        reader.readAsDataURL(file);
+      });
 
-      if (uploadError) {
-        throw new Error(`Upload failed: ${uploadError.message}`);
-      }
-
-      // Step 2: Ingest (parse, chunk, embed, store)
       setStatus('indexing');
-      const result = await ingestDoc(fileName, docName.trim());
+      const result = await ingestDoc(base64, docName.trim());
       setIndexedChunks(result.chunks);
       setStatus('done');
 
