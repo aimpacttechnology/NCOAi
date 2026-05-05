@@ -1,6 +1,6 @@
 import Anthropic from '@anthropic-ai/sdk';
 
-export const runtime = 'edge';
+export const config = { maxDuration: 60 };
 
 const SGM_BASE = `You are a Sergeant Major (SGM) with 25 years of U.S. Army service.
 You are an expert in Army doctrine, regulations, and NCO leadership.
@@ -13,61 +13,48 @@ When answering questions:
 
 You help NCOs make better decisions and never guess at regulations.`;
 
-export default async function handler(req: Request) {
+export default async function handler(req: any, res: any) {
   if (req.method !== 'POST') {
-    return new Response('Method not allowed', { status: 405 });
+    res.status(405).json({ error: 'Method not allowed' });
+    return;
   }
 
-  const { message, history = [] } = await req.json() as {
+  const { message, history = [] } = req.body as {
     message: string;
     history: Array<{ role: 'user' | 'assistant'; content: string }>;
   };
 
   if (!message?.trim()) {
-    return new Response(JSON.stringify({ error: 'Message required' }), {
-      status: 400,
-      headers: { 'Content-Type': 'application/json' },
-    });
+    res.status(400).json({ error: 'Message required' });
+    return;
   }
+
+  res.setHeader('Content-Type', 'text/plain; charset=utf-8');
+  res.setHeader('Cache-Control', 'no-cache');
+  res.setHeader('X-Accel-Buffering', 'no');
 
   try {
     const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
-    const encoder = new TextEncoder();
 
-    const readable = new ReadableStream({
-      async start(controller) {
-        try {
-          const stream = anthropic.messages.stream({
-            model: 'claude-sonnet-4-6',
-            max_tokens: 1024,
-            system: SGM_BASE,
-            messages: [...history, { role: 'user', content: message }],
-          });
-
-          for await (const chunk of stream) {
-            if (chunk.type === 'content_block_delta' && chunk.delta.type === 'text_delta') {
-              controller.enqueue(encoder.encode(chunk.delta.text));
-            }
-          }
-          controller.close();
-        } catch (err) {
-          controller.error(err);
-        }
-      },
+    const stream = anthropic.messages.stream({
+      model: 'claude-sonnet-4-6',
+      max_tokens: 1024,
+      system: SGM_BASE,
+      messages: [...history, { role: 'user', content: message }],
     });
 
-    return new Response(readable, {
-      headers: {
-        'Content-Type': 'text/plain; charset=utf-8',
-        'Cache-Control': 'no-cache',
-        'X-Accel-Buffering': 'no',
-      },
-    });
+    for await (const chunk of stream) {
+      if (chunk.type === 'content_block_delta' && chunk.delta.type === 'text_delta') {
+        res.write(chunk.delta.text);
+      }
+    }
+    res.end();
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
-    return new Response(JSON.stringify({ error: msg }), {
-      status: 500,
-      headers: { 'Content-Type': 'application/json' },
-    });
+    if (!res.headersSent) {
+      res.status(500).json({ error: msg });
+    } else {
+      res.end();
+    }
   }
 }
