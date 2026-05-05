@@ -19,6 +19,7 @@ import Tasks from './pages/Tasks';
 import UnitGapAnalysis from './pages/UnitGapAnalysis';
 import AwardWizard from './pages/AwardWizard';
 import TrainingPlanner from './pages/TrainingPlanner';
+import DocLibrary from './pages/DocLibrary';
 
 function Protected({ user, children }: { user: User | null; children: React.ReactNode }) {
   if (!user) return <Navigate to="/login" replace />;
@@ -69,6 +70,7 @@ export default function App() {
         <Route path="/unit-gaps" element={<Protected user={user}><UnitGapAnalysis /></Protected>} />
         <Route path="/awards" element={<Protected user={user}><AwardWizard /></Protected>} />
         <Route path="/training" element={<Protected user={user}><TrainingPlanner /></Protected>} />
+        <Route path="/library" element={<Protected user={user}><DocLibrary /></Protected>} />
         <Route path="*" element={<Navigate to={user ? '/dashboard' : '/login'} replace />} />
       </Routes>
     </BrowserRouter>

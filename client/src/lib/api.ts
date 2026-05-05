@@ -145,3 +145,32 @@ export async function askSGM(
     onChunk(decoder.decode(value, { stream: true }));
   }
 }
+
+export async function listLibraryDocs(): Promise<Array<{ doc_name: string; chunk_count: number }>> {
+  const res = await fetch('/api/library/list');
+  if (!res.ok) throw new Error(`Server error ${res.status}`);
+  const data = await res.json();
+  return data.docs ?? [];
+}
+
+export async function ingestDoc(storagePath: string, docName: string): Promise<{ chunks: number }> {
+  const res = await fetch('/api/library/ingest', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ storagePath, docName }),
+  });
+  if (!res.ok) {
+    const body = await res.text().catch(() => '');
+    throw new Error(`[${res.status}] ${body}`);
+  }
+  return res.json();
+}
+
+export async function deleteLibraryDoc(docName: string): Promise<void> {
+  const res = await fetch('/api/library/delete', {
+    method: 'DELETE',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ docName }),
+  });
+  if (!res.ok) throw new Error(`Server error ${res.status}`);
+}

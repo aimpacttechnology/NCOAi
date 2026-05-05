@@ -14,6 +14,7 @@ const NAV = [
   { path: '/mentorship',     label: 'MENTORSHIP',  icon: '◆' },
   { path: '/plans',          label: 'DEV PLANS',   icon: '▣' },
   { path: '/journal',        label: 'JOURNAL',     icon: '◇' },
+  { path: '/library',        label: 'DOC LIBRARY', icon: '▦' },
   { path: '/ask-sgm',        label: 'ASK THE SGM', icon: '⊕' },
 ];
 
