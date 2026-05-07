@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import MarkdownOutput from '../components/MarkdownOutput';
 import { supabase } from '../lib/supabase';
 import { generateAwardRec } from '../lib/api';
 import { exportToPDF } from '../lib/exportPDF';
@@ -275,16 +276,7 @@ export default function AwardWizard() {
             {generating && !output && (
               <div className="font-mono text-army-muted text-sm animate-pulse">Generating award recommendation...</div>
             )}
-            <div className="font-mono text-sm text-army-text whitespace-pre-wrap leading-relaxed">
-              {output.split('\n').map((line, i) => {
-                if (line.startsWith('## '))
-                  return <div key={i} className="text-army-gold font-bold text-base mt-5 mb-2 first:mt-0">{line.replace('## ', '')}</div>;
-                if (line.startsWith('**') && line.endsWith('**'))
-                  return <div key={i} className="font-bold mt-2">{line.replace(/\*\*/g, '')}</div>;
-                return <div key={i}>{line}</div>;
-              })}
-              {generating && <span className="inline-block w-2 h-4 bg-army-gold ml-0.5 animate-pulse align-text-bottom" />}
-            </div>
+            <MarkdownOutput content={output} streaming={generating} />
           </div>
 
           {!generating && output && soldierPayload && (

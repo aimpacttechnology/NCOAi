@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import MarkdownOutput from '../components/MarkdownOutput';
 import { supabase } from '../lib/supabase';
 import { prepareMentorship } from '../lib/api';
 import { calcScore, type PromotionData } from '../lib/promotionScore';
@@ -234,16 +235,7 @@ export default function MentorshipWizard() {
                 <div className="font-mono text-[10px] tracking-widest text-army-gold uppercase mb-3">
                   Session Preparation — {selected.rank} {selected.last_name}
                 </div>
-                <div className="font-mono text-sm text-army-text whitespace-pre-wrap leading-relaxed">
-                  {talkingPoints.split('\n').map((line, i) => {
-                    if (line.startsWith('## '))
-                      return <div key={i} className="text-army-gold font-bold mt-4 mb-1 first:mt-0">{line.replace('## ', '')}</div>;
-                    if (line.startsWith('**') && line.endsWith('**'))
-                      return <div key={i} className="text-army-text font-bold mt-2">{line.replace(/\*\*/g, '')}</div>;
-                    return <div key={i}>{line}</div>;
-                  })}
-                  {preparing && <span className="inline-block w-2 h-4 bg-army-gold ml-0.5 animate-pulse align-text-bottom" />}
-                </div>
+                <MarkdownOutput content={talkingPoints} streaming={preparing} />
               </div>
             )}
 

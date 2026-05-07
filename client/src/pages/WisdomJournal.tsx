@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '../lib/supabase';
 import { assistJournal } from '../lib/api';
+import MarkdownOutput from '../components/MarkdownOutput';
 
 interface Entry {
   id: string;
@@ -203,10 +204,7 @@ export default function WisdomJournal() {
               {(aiOutput || assisting) && (
                 <div className="bg-surface border border-army-gold p-5">
                   <div className="font-mono text-[10px] tracking-widest text-army-gold uppercase mb-3">AI Draft</div>
-                  <div className="font-mono text-sm text-army-text whitespace-pre-wrap leading-relaxed mb-3">
-                    {aiOutput}
-                    {assisting && <span className="inline-block w-2 h-4 bg-army-gold ml-0.5 animate-pulse align-text-bottom" />}
-                  </div>
+                  <MarkdownOutput content={aiOutput} streaming={assisting} className="mb-3" />
                   {!assisting && aiOutput && (
                     <button onClick={useAiDraft}
                       className="font-mono text-xs text-army-gold border border-army-gold hover:bg-army-gold hover:text-bg px-4 py-1.5 transition-colors">

@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import MarkdownOutput from '../components/MarkdownOutput';
 import { supabase } from '../lib/supabase';
 import { analyzeUnitGaps } from '../lib/api';
 import { calcScore, type PromotionData } from '../lib/promotionScore';
@@ -284,16 +285,7 @@ export default function UnitGapAnalysis() {
               <div className="font-mono text-[10px] tracking-widest text-army-gold uppercase mb-4">
                 CSM Training Recommendation Brief
               </div>
-              <div className="font-mono text-sm text-army-text whitespace-pre-wrap leading-relaxed">
-                {analysis.split('\n').map((line, i) => {
-                  if (line.startsWith('## '))
-                    return <div key={i} className="text-army-gold font-bold text-base mt-5 mb-2 first:mt-0">{line.replace('## ', '')}</div>;
-                  if (line.startsWith('**') && line.endsWith('**'))
-                    return <div key={i} className="font-bold mt-2 text-army-text">{line.replace(/\*\*/g, '')}</div>;
-                  return <div key={i}>{line}</div>;
-                })}
-                {analyzing && <span className="inline-block w-2 h-4 bg-army-gold ml-0.5 animate-pulse align-text-bottom" />}
-              </div>
+              <MarkdownOutput content={analysis} streaming={analyzing} />
             </div>
           )}
         </>

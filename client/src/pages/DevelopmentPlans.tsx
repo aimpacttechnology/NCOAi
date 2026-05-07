@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import MarkdownOutput from '../components/MarkdownOutput';
 import { supabase } from '../lib/supabase';
 import { generateDevelopmentPlan } from '../lib/api';
 import { calcScore, type PromotionData } from '../lib/promotionScore';
@@ -229,15 +230,7 @@ export default function DevelopmentPlans() {
               </button>
             </div>
             <div className="bg-surface border border-border p-6">
-              <div className="font-mono text-sm text-army-text whitespace-pre-wrap leading-relaxed">
-                {(selected.ai_plan ?? '').split('\n').map((line, i) => {
-                  if (line.startsWith('## '))
-                    return <div key={i} className="text-army-gold font-bold text-base mt-5 mb-2 first:mt-0">{line.replace('## ', '')}</div>;
-                  if (line.startsWith('**') && line.endsWith('**'))
-                    return <div key={i} className="text-army-text font-bold mt-3">{line.replace(/\*\*/g, '')}</div>;
-                  return <div key={i}>{line}</div>;
-                })}
-              </div>
+              <MarkdownOutput content={selected.ai_plan ?? ''} />
             </div>
           </div>
         )}
@@ -306,16 +299,7 @@ export default function DevelopmentPlans() {
                 <div className="font-mono text-[10px] tracking-widest text-army-gold uppercase mb-3">
                   {PLAN_LABELS[form.plan_type]?.label} Development Plan
                 </div>
-                <div className="font-mono text-sm text-army-text whitespace-pre-wrap leading-relaxed">
-                  {output.split('\n').map((line, i) => {
-                    if (line.startsWith('## '))
-                      return <div key={i} className="text-army-gold font-bold text-base mt-5 mb-2 first:mt-0">{line.replace('## ', '')}</div>;
-                    if (line.startsWith('**') && line.endsWith('**'))
-                      return <div key={i} className="text-army-text font-bold mt-3">{line.replace(/\*\*/g, '')}</div>;
-                    return <div key={i}>{line}</div>;
-                  })}
-                  {generating && <span className="inline-block w-2 h-4 bg-army-gold ml-0.5 animate-pulse align-text-bottom" />}
-                </div>
+                <MarkdownOutput content={output} streaming={generating} />
               </div>
             )}
 

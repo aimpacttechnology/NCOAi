@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import MarkdownOutput from '../components/MarkdownOutput';
 import { supabase } from '../lib/supabase';
 import { generateCounseling } from '../lib/api';
 import { exportToPDF } from '../lib/exportPDF';
@@ -301,12 +302,7 @@ export default function CounselingWizard() {
                 Generating counseling statement...
               </div>
             )}
-            <pre className="font-mono text-sm text-army-text whitespace-pre-wrap leading-relaxed">
-              {output}
-              {generating && output && (
-                <span className="inline-block w-2 h-4 bg-army-gold ml-0.5 animate-pulse align-text-bottom" />
-              )}
-            </pre>
+            <MarkdownOutput content={output} streaming={generating && !!output} />
           </div>
 
           {!generating && output && (
