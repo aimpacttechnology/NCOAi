@@ -118,7 +118,9 @@ export default function WisdomJournal() {
           {loading ? <div className="px-5 py-4 font-mono text-xs text-army-muted">Loading...</div>
             : filtered.length === 0 ? (
               <div className="px-5 py-8 text-center font-mono text-xs text-army-muted">
-                {searchTag ? `No entries tagged "${searchTag}"` : 'No entries yet.\nCapture your first lesson.'}
+                {searchTag ? `No entries tagged "${searchTag}"` : (
+                  <><div>No entries yet.</div><div className="mt-1">Capture your first lesson learned.</div></>
+                )}
               </div>
             ) : filtered.map(e => (
               <button key={e.id} onClick={() => { setSelected(e); setShowNew(false); }}

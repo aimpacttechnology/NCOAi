@@ -148,7 +148,7 @@ export default function AskSGM() {
             disabled={!input.trim() || streaming}
             className="bg-army-tan hover:bg-[#9e8562] disabled:opacity-40 disabled:cursor-not-allowed text-army-text font-mono text-xs tracking-widest uppercase px-5 py-3 h-full transition-colors"
           >
-            {streaming ? '...' : 'SEND'}
+            {streaming ? 'SENDING...' : 'SEND'}
           </button>
         </div>
         <div className="font-mono text-[10px] text-army-muted mt-2">

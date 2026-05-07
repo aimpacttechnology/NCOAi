@@ -412,11 +412,11 @@ export default function TrainingPlanner() {
               <div className="flex gap-2 flex-shrink-0">
                 <button onClick={handleGenOpord} disabled={genOpord}
                   className="border border-border hover:border-army-tan text-army-muted hover:text-army-text font-mono text-[10px] tracking-wider uppercase px-3 py-1.5 transition-colors disabled:opacity-50">
-                  {genOpord ? '...' : '⊞ OPORD'}
+                  {genOpord ? 'GENERATING...' : '⊞ OPORD'}
                 </button>
                 <button onClick={handleGenSchedule} disabled={genSchedule}
                   className="border border-border hover:border-army-tan text-army-muted hover:text-army-text font-mono text-[10px] tracking-wider uppercase px-3 py-1.5 transition-colors disabled:opacity-50">
-                  {genSchedule ? '...' : '▣ SCHEDULE'}
+                  {genSchedule ? 'GENERATING...' : '▣ SCHEDULE'}
                 </button>
               </div>
             </div>

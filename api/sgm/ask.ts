@@ -83,8 +83,6 @@ export default async function handler(req: any, res: any) {
 
     if (sources.length > 0) {
       res.write(`[Searching doctrine: ${sources.join(', ')}]\n\n`);
-    } else {
-      res.write(`[RAG: ${debug || 'no matches'}]\n\n`);
     }
 
     const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
