@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react';
 import type { User } from '@supabase/supabase-js';
 import { supabase } from './lib/supabase';
 import Layout from './components/Layout';
+import TermsGate from './pages/TermsGate';
 import Login from './pages/Login';
 import Dashboard from './pages/Dashboard';
 import Soldiers from './pages/Soldiers';
@@ -27,17 +28,43 @@ function Protected({ user, children }: { user: User | null; children: React.Reac
 }
 
 export default function App() {
-  const [user, setUser] = useState<User | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [user, setUser]             = useState<User | null>(null);
+  const [termsAccepted, setTerms]   = useState(false);
+  const [loading, setLoading]       = useState(true);
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data }) => {
-      setUser(data.session?.user ?? null);
-      setLoading(false);
-    });
+    const init = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      const u = session?.user ?? null;
+      setUser(u);
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_e, session) => {
-      setUser(session?.user ?? null);
+      if (u) {
+        const { data } = await supabase
+          .from('profiles')
+          .select('terms_accepted_at')
+          .eq('id', u.id)
+          .single();
+        setTerms(!!data?.terms_accepted_at);
+      }
+
+      setLoading(false);
+    };
+
+    init();
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_e, session) => {
+      const u = session?.user ?? null;
+      setUser(u);
+      if (u) {
+        const { data } = await supabase
+          .from('profiles')
+          .select('terms_accepted_at')
+          .eq('id', u.id)
+          .single();
+        setTerms(!!data?.terms_accepted_at);
+      } else {
+        setTerms(false);
+      }
     });
 
     return () => subscription.unsubscribe();
@@ -51,26 +78,31 @@ export default function App() {
     );
   }
 
+  // Logged in but hasn't accepted terms yet
+  if (user && !termsAccepted) {
+    return <TermsGate userId={user.id} onAccepted={() => setTerms(true)} />;
+  }
+
   return (
     <BrowserRouter>
       <Routes>
         <Route path="/login" element={user ? <Navigate to="/dashboard" /> : <Login />} />
-        <Route path="/dashboard" element={<Protected user={user}><Dashboard /></Protected>} />
-        <Route path="/soldiers" element={<Protected user={user}><Soldiers /></Protected>} />
-        <Route path="/soldiers/:id" element={<Protected user={user}><SoldierDetail /></Protected>} />
+        <Route path="/dashboard"      element={<Protected user={user}><Dashboard /></Protected>} />
+        <Route path="/soldiers"       element={<Protected user={user}><Soldiers /></Protected>} />
+        <Route path="/soldiers/:id"   element={<Protected user={user}><SoldierDetail /></Protected>} />
         <Route path="/counseling/new" element={<Protected user={user}><CounselingWizard /></Protected>} />
-        <Route path="/ask-sgm" element={<Protected user={user}><AskSGM /></Protected>} />
-        <Route path="/ncoer" element={<Protected user={user}><NCOERGenerator /></Protected>} />
-        <Route path="/promotion" element={<Protected user={user}><PromotionReadiness /></Protected>} />
-        <Route path="/profile" element={<Protected user={user}><Profile /></Protected>} />
-        <Route path="/mentorship" element={<Protected user={user}><MentorshipWizard /></Protected>} />
-        <Route path="/plans" element={<Protected user={user}><DevelopmentPlans /></Protected>} />
-        <Route path="/journal" element={<Protected user={user}><WisdomJournal /></Protected>} />
-        <Route path="/tasks" element={<Protected user={user}><Tasks /></Protected>} />
-        <Route path="/unit-gaps" element={<Protected user={user}><UnitGapAnalysis /></Protected>} />
-        <Route path="/awards" element={<Protected user={user}><AwardWizard /></Protected>} />
-        <Route path="/training" element={<Protected user={user}><TrainingPlanner /></Protected>} />
-        <Route path="/library" element={<Protected user={user}><DocLibrary /></Protected>} />
+        <Route path="/ask-sgm"        element={<Protected user={user}><AskSGM /></Protected>} />
+        <Route path="/ncoer"          element={<Protected user={user}><NCOERGenerator /></Protected>} />
+        <Route path="/promotion"      element={<Protected user={user}><PromotionReadiness /></Protected>} />
+        <Route path="/profile"        element={<Protected user={user}><Profile /></Protected>} />
+        <Route path="/mentorship"     element={<Protected user={user}><MentorshipWizard /></Protected>} />
+        <Route path="/plans"          element={<Protected user={user}><DevelopmentPlans /></Protected>} />
+        <Route path="/journal"        element={<Protected user={user}><WisdomJournal /></Protected>} />
+        <Route path="/tasks"          element={<Protected user={user}><Tasks /></Protected>} />
+        <Route path="/unit-gaps"      element={<Protected user={user}><UnitGapAnalysis /></Protected>} />
+        <Route path="/awards"         element={<Protected user={user}><AwardWizard /></Protected>} />
+        <Route path="/training"       element={<Protected user={user}><TrainingPlanner /></Protected>} />
+        <Route path="/library"        element={<Protected user={user}><DocLibrary /></Protected>} />
         <Route path="*" element={<Navigate to={user ? '/dashboard' : '/login'} replace />} />
       </Routes>
     </BrowserRouter>
