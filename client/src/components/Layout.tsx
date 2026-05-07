@@ -57,6 +57,17 @@ export default function Layout({ children }: { children: React.ReactNode }) {
           })}
         </nav>
 
+        {/* Unit customization banner */}
+        <a
+          href="https://aimpact-website-delta.vercel.app/"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="block mx-3 mb-2 px-3 py-2 border border-army-gold/30 hover:border-army-gold bg-army-gold/5 hover:bg-army-gold/10 transition-colors text-center"
+        >
+          <div className="font-mono text-[9px] tracking-widest text-army-gold uppercase">Unit Customization</div>
+          <div className="font-mono text-[8px] text-army-muted mt-0.5">Branded for your formation</div>
+        </a>
+
         <div className="px-3 py-4 border-t border-border space-y-0.5">
           <Link
             to="/profile"
