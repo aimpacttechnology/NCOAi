@@ -42,9 +42,9 @@ async function getDocContext(message: string): Promise<{ context: string; source
 
     const supabase = createClient(supabaseUrl, supabaseKey);
     const { data, error } = await supabase.rpc('search_doc_chunks', {
-      query_embedding: queryEmbedding,
+      query_embedding: `[${queryEmbedding.join(',')}]`,
       match_count: 5,
-      min_similarity: 0.1,
+      min_similarity: 0.3,
     });
 
     if (error)              return { context: '', sources: [], debug: `Supabase RPC error: ${error.message}` };
