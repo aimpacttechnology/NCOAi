@@ -12,7 +12,6 @@ import * as path from 'path';
 import { fileURLToPath } from 'url';
 import { createClient } from '@supabase/supabase-js';
 import dotenv from 'dotenv';
-import { VoyageAIClient } from 'voyageai';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -34,7 +33,6 @@ if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY || !VOYAGE_API_KEY) {
 }
 
 const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
-const voyage   = new VoyageAIClient({ apiKey: VOYAGE_API_KEY });
 const clearMode = process.argv.includes('--clear');
 
 function chunkText(text: string): string[] {
@@ -50,8 +48,20 @@ function chunkText(text: string): string[] {
 }
 
 async function embedBatch(texts: string[]): Promise<number[][]> {
-  const res = await voyage.embed({ input: texts, model: 'voyage-3-lite' });
-  return res.data.map((d: { embedding: number[] }) => d.embedding);
+  const res = await fetch('https://api.voyageai.com/v1/embeddings', {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${VOYAGE_API_KEY}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ input: texts, model: 'voyage-3-lite' }),
+  });
+  if (!res.ok) {
+    const err = await res.text();
+    throw new Error(`VoyageAI error ${res.status}: ${err}`);
+  }
+  const json = await res.json() as { data: Array<{ embedding: number[] }> };
+  return json.data.map(d => d.embedding);
 }
 
 async function ingestPDF(filePath: string, docName: string): Promise<void> {
