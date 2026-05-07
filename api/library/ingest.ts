@@ -1,5 +1,5 @@
 import { createClient } from '@supabase/supabase-js';
-import { VoyageAIClient } from 'voyageai';
+import { requireAdmin } from '../lib/adminAuth';
 import pdfParse from 'pdf-parse/lib/pdf-parse.js';
 
 export const config = {
@@ -26,6 +26,8 @@ export default async function handler(req: any, res: any) {
     res.status(405).json({ error: 'Method not allowed' });
     return;
   }
+
+  if (!await requireAdmin(req, res)) return;
 
   const { fileBase64, docName } = req.body as { fileBase64: string; docName: string };
 

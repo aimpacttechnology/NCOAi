@@ -2,6 +2,18 @@ import { useEffect, useRef, useState } from 'react';
 import { supabase } from '../lib/supabase';
 import { listLibraryDocs, ingestDoc, deleteLibraryDoc } from '../lib/api';
 
+function AccessDenied() {
+  return (
+    <div className="p-8 max-w-4xl flex items-center justify-center min-h-64">
+      <div className="text-center">
+        <div className="font-mono text-4xl text-army-muted mb-4">⊘</div>
+        <div className="font-mono text-sm text-army-text mb-1">Admin Access Required</div>
+        <div className="font-mono text-xs text-army-muted">The Doctrine Library is restricted to platform administrators.</div>
+      </div>
+    </div>
+  );
+}
+
 interface LibraryDoc {
   doc_name: string;
   chunk_count: number;
@@ -20,7 +32,16 @@ export default function DocLibrary() {
   const [statusMsg, setStatusMsg]     = useState('');
   const [indexedChunks, setIndexedChunks] = useState(0);
 
+  const [isAdmin, setIsAdmin] = useState<boolean | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    supabase.auth.getUser().then(({ data: { user } }) => {
+      if (!user) { setIsAdmin(false); return; }
+      supabase.from('profiles').select('role').eq('id', user.id).single()
+        .then(({ data }) => setIsAdmin(data?.role === 'admin'));
+    });
+  }, []);
 
   const load = async () => {
     setLoading(true);
@@ -35,7 +56,7 @@ export default function DocLibrary() {
     }
   };
 
-  useEffect(() => { load(); }, []);
+  useEffect(() => { if (isAdmin) load(); }, [isAdmin]);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const f = e.target.files?.[0] ?? null;
@@ -94,6 +115,9 @@ export default function DocLibrary() {
 
   const canUpload = file !== null && docName.trim().length > 0 && (status === 'idle' || status === 'done' || status === 'error');
   const isBusy = status === 'uploading' || status === 'indexing';
+
+  if (isAdmin === null) return <div className="p-8 font-mono text-army-muted text-sm">LOADING...</div>;
+  if (!isAdmin) return <AccessDenied />;
 
   return (
     <div className="p-8 max-w-4xl">

@@ -1,4 +1,5 @@
 import { Link, useLocation, useNavigate } from 'react-router-dom';
+import { useEffect, useState } from 'react';
 import { supabase } from '../lib/supabase';
 
 const NAV = [
@@ -14,13 +15,25 @@ const NAV = [
   { path: '/mentorship',     label: 'MENTORSHIP',  icon: '◆' },
   { path: '/plans',          label: 'DEV PLANS',   icon: '▣' },
   { path: '/journal',        label: 'JOURNAL',     icon: '◇' },
-  { path: '/library',        label: 'DOC LIBRARY', icon: '▦' },
   { path: '/ask-sgm',        label: 'ASK THE SGM', icon: '⊕' },
+];
+
+const ADMIN_NAV = [
+  { path: '/library', label: 'DOC LIBRARY', icon: '▦' },
 ];
 
 export default function Layout({ children }: { children: React.ReactNode }) {
   const location = useLocation();
   const navigate = useNavigate();
+  const [isAdmin, setIsAdmin] = useState(false);
+
+  useEffect(() => {
+    supabase.auth.getUser().then(({ data: { user } }) => {
+      if (!user) return;
+      supabase.from('profiles').select('role').eq('id', user.id).single()
+        .then(({ data }) => setIsAdmin(data?.role === 'admin'));
+    });
+  }, []);
 
   const handleLogout = async () => {
     await supabase.auth.signOut();
@@ -36,8 +49,8 @@ export default function Layout({ children }: { children: React.ReactNode }) {
           <div className="font-mono text-army-tan text-[10px] tracking-[0.25em] mt-0.5 uppercase">Leadership Platform</div>
         </div>
 
-        <nav className="flex-1 py-4 px-3 space-y-0.5">
-          {NAV.map(item => {
+        <nav className="flex-1 py-4 px-3 space-y-0.5 overflow-y-auto">
+          {[...NAV, ...(isAdmin ? ADMIN_NAV : [])].map(item => {
             const active = location.pathname === item.path ||
               (item.path !== '/dashboard' && location.pathname.startsWith(item.path.split('/')[1] ? `/${item.path.split('/')[1]}` : item.path));
             return (

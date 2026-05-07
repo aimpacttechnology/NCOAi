@@ -146,17 +146,31 @@ export async function askSGM(
   }
 }
 
+import { supabase } from './supabase';
+
+async function getAuthToken(): Promise<string> {
+  const { data: { session } } = await supabase.auth.getSession();
+  return session?.access_token ?? '';
+}
+
 export async function listLibraryDocs(): Promise<Array<{ doc_name: string; chunk_count: number }>> {
-  const res = await fetch('/api/library/list');
-  if (!res.ok) throw new Error(`Server error ${res.status}`);
+  const token = await getAuthToken();
+  const res = await fetch('/api/library/list', {
+    headers: { 'Authorization': `Bearer ${token}` },
+  });
+  if (!res.ok) {
+    const body = await res.text().catch(() => '');
+    throw new Error(`[${res.status}] ${body}`);
+  }
   const data = await res.json();
   return data.docs ?? [];
 }
 
 export async function ingestDoc(fileBase64: string, docName: string): Promise<{ chunks: number }> {
+  const token = await getAuthToken();
   const res = await fetch('/api/library/ingest', {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
     body: JSON.stringify({ fileBase64, docName }),
   });
   if (!res.ok) {
@@ -167,9 +181,10 @@ export async function ingestDoc(fileBase64: string, docName: string): Promise<{ 
 }
 
 export async function deleteLibraryDoc(docName: string): Promise<void> {
+  const token = await getAuthToken();
   const res = await fetch('/api/library/delete', {
     method: 'DELETE',
-    headers: { 'Content-Type': 'application/json' },
+    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
     body: JSON.stringify({ docName }),
   });
   if (!res.ok) throw new Error(`Server error ${res.status}`);
