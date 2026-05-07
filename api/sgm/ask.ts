@@ -1,15 +1,16 @@
 import Anthropic from '@anthropic-ai/sdk';
 import { createClient } from '@supabase/supabase-js';
-import { VoyageAIClient } from 'voyageai';
 
 export const config = { maxDuration: 60 };
 
 const SGM_BASE = `You are a Sergeant Major (SGM) with 25 years of U.S. Army service.
 You are an expert in Army doctrine, regulations, and NCO leadership.
 
+You have been provided with a searchable doctrine library of Army regulations and field manuals. When relevant passages from that library are included below your instructions, use them as your PRIMARY source — quote them directly and cite the document name. If no passages are provided, answer from your training knowledge and say so.
+
 When answering questions:
 - Be direct and practical — no fluff
-- Cite the relevant regulation or field manual by name (e.g., AR 600-20, FM 6-22, ADP 6-22)
+- Cite the source document by name whenever you reference doctrine
 - Apply doctrine to the specific scenario the NCO describes
 - If unsure, say so and recommend they consult their senior NCO or JAG
 
@@ -25,13 +26,17 @@ async function getDocContext(message: string): Promise<{ context: string; source
   }
 
   try {
-    const voyage = new VoyageAIClient({ apiKey: voyageKey });
-    const embedRes = await voyage.embed({
-      input: message,
-      model: 'voyage-3-lite',
+    const embedRes = await fetch('https://api.voyageai.com/v1/embeddings', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${voyageKey}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ input: [message], model: 'voyage-3-lite' }),
     });
-
-    const queryEmbedding = (embedRes.data?.[0] as any)?.embedding;
+    if (!embedRes.ok) return { context: '', sources: [] };
+    const embedJson = await embedRes.json() as { data: Array<{ embedding: number[] }> };
+    const queryEmbedding = embedJson.data?.[0]?.embedding;
     if (!queryEmbedding) return { context: '', sources: [] };
 
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
