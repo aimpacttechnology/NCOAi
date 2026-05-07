@@ -11,27 +11,44 @@ interface Profile {
   unit: string | null;
 }
 
+interface ComplianceAlert {
+  soldier_id: string;
+  name: string;
+  rank: string;
+  status: 'initial_overdue' | 'initial_due_soon' | 'quarterly_overdue' | 'quarterly_due_soon';
+  days: number;
+}
+
+function daysBetween(a: Date, b: Date) {
+  return (b.getTime() - a.getTime()) / (1000 * 60 * 60 * 24);
+}
+
 export default function Dashboard() {
   const navigate = useNavigate();
-  const [profile, setProfile]             = useState<Profile | null>(null);
-  const [soldierCount, setSoldierCount]   = useState(0);
-  const [counselingCount, setCounselingCount] = useState(0);
-  const [promoReady, setPromoReady]       = useState<{ green: number; total: number } | null>(null);
-  const [loading, setLoading]             = useState(true);
+  const [profile, setProfile]                   = useState<Profile | null>(null);
+  const [soldierCount, setSoldierCount]         = useState(0);
+  const [counselingCount, setCounselingCount]   = useState(0);
+  const [promoReady, setPromoReady]             = useState<{ green: number; total: number } | null>(null);
+  const [alerts, setAlerts]                     = useState<ComplianceAlert[]>([]);
+  const [loading, setLoading]                   = useState(true);
 
   useEffect(() => {
     const load = async () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
 
-      const [profileRes, soldiersRes, counselingsRes, promoRes] = await Promise.all([
+      const [profileRes, soldiersRes, counselingsRes, promoRes, allCounselingsRes] = await Promise.all([
         supabase.from('profiles').select('rank, first_name, last_name, unit').eq('id', user.id).single(),
-        supabase.from('soldiers').select('id', { count: 'exact' }).eq('nco_id', user.id),
+        supabase.from('soldiers').select('id, first_name, last_name, rank, created_at').eq('nco_id', user.id),
         supabase.from('counselings')
           .select('id', { count: 'exact' })
           .eq('nco_id', user.id)
           .gte('created_at', new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString()),
         supabase.from('promotion_data').select('*').eq('nco_id', user.id),
+        supabase.from('counselings')
+          .select('soldier_id, created_at')
+          .eq('nco_id', user.id)
+          .order('created_at', { ascending: false }),
       ]);
 
       if (profileRes.data) setProfile(profileRes.data);
@@ -44,6 +61,65 @@ export default function Dashboard() {
         setPromoReady({ green, total: assessed.length });
       }
 
+      // Build compliance alerts
+      const soldiers = soldiersRes.data ?? [];
+      const counselings = allCounselingsRes.data ?? [];
+
+      const lastCounseling: Record<string, Date> = {};
+      for (const c of counselings) {
+        if (!lastCounseling[c.soldier_id]) {
+          lastCounseling[c.soldier_id] = new Date(c.created_at);
+        }
+      }
+
+      const now = new Date();
+      const complianceAlerts: ComplianceAlert[] = [];
+
+      for (const s of soldiers) {
+        const name = `${s.rank} ${s.last_name}`;
+        const addedDaysAgo = daysBetween(new Date(s.created_at), now);
+        const lastDate = lastCounseling[s.id];
+        const daysSinceLast = lastDate ? daysBetween(lastDate, now) : null;
+
+        if (daysSinceLast === null) {
+          // No counseling on record
+          if (addedDaysAgo > 30) {
+            complianceAlerts.push({
+              soldier_id: s.id, name, rank: s.rank,
+              status: 'initial_overdue',
+              days: Math.floor(addedDaysAgo - 30),
+            });
+          } else if (addedDaysAgo > 23) {
+            complianceAlerts.push({
+              soldier_id: s.id, name, rank: s.rank,
+              status: 'initial_due_soon',
+              days: Math.ceil(30 - addedDaysAgo),
+            });
+          }
+        } else if (daysSinceLast > 90) {
+          complianceAlerts.push({
+            soldier_id: s.id, name, rank: s.rank,
+            status: 'quarterly_overdue',
+            days: Math.floor(daysSinceLast - 90),
+          });
+        } else if (daysSinceLast > 83) {
+          complianceAlerts.push({
+            soldier_id: s.id, name, rank: s.rank,
+            status: 'quarterly_due_soon',
+            days: Math.ceil(90 - daysSinceLast),
+          });
+        }
+      }
+
+      // Sort: overdue first, then by days descending
+      complianceAlerts.sort((a, b) => {
+        const aOverdue = a.status.includes('overdue');
+        const bOverdue = b.status.includes('overdue');
+        if (aOverdue !== bOverdue) return aOverdue ? -1 : 1;
+        return b.days - a.days;
+      });
+
+      setAlerts(complianceAlerts);
       setLoading(false);
     };
     load();
@@ -53,13 +129,12 @@ export default function Dashboard() {
     ? [profile.rank, profile.last_name].filter(Boolean).join(' ') || 'Soldier'
     : '...';
 
-  const promoStat = promoReady
-    ? `${promoReady.green}/${promoReady.total}`
-    : '—';
-
-  const promoSub = promoReady
+  const promoStat = promoReady ? `${promoReady.green}/${promoReady.total}` : '—';
+  const promoSub  = promoReady
     ? `${promoReady.green} of ${promoReady.total} assessed GREEN`
     : 'No assessments yet';
+
+  const overdueCount = alerts.filter(a => a.status.includes('overdue')).length;
 
   return (
     <div className="p-8 max-w-5xl mx-auto">
@@ -78,23 +153,67 @@ export default function Dashboard() {
 
       {/* Stat Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-8">
-        <StatCard
-          label="Soldiers Managed"
-          value={loading ? '—' : soldierCount}
-          sub="Active roster"
-        />
+        <StatCard label="Soldiers Managed" value={loading ? '—' : soldierCount} sub="Active roster" />
         <StatCard
           label="Counselings This Month"
           value={loading ? '—' : counselingCount}
           sub={new Date().toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
         />
-        <StatCard
-          label="Promotion Readiness"
-          value={loading ? '—' : promoStat}
-          sub={loading ? '' : promoSub}
-          accent
-        />
+        <StatCard label="Promotion Readiness" value={loading ? '—' : promoStat} sub={loading ? '' : promoSub} accent />
       </div>
+
+      {/* Counseling Compliance */}
+      {!loading && alerts.length > 0 && (
+        <div className="mb-8">
+          <div className="flex items-center justify-between mb-3">
+            <div className="font-mono text-[10px] tracking-widest text-army-muted uppercase">
+              Counseling Compliance — AR 623-3
+            </div>
+            {overdueCount > 0 && (
+              <div className="font-mono text-[10px] tracking-widest text-danger uppercase">
+                {overdueCount} OVERDUE
+              </div>
+            )}
+          </div>
+          <div className="border border-border divide-y divide-border">
+            {alerts.map(alert => {
+              const isOverdue = alert.status.includes('overdue');
+              const isInitial = alert.status.includes('initial');
+              return (
+                <div key={alert.soldier_id} className="flex items-center justify-between px-4 py-3 hover:bg-surface transition-colors">
+                  <div className="flex items-center gap-4">
+                    <div className={`w-2 h-2 rounded-full flex-shrink-0 ${isOverdue ? 'bg-danger' : 'bg-army-gold'}`} />
+                    <div>
+                      <div className="font-mono text-sm text-army-text">{alert.name}</div>
+                      <div className={`font-mono text-[10px] tracking-wide mt-0.5 ${isOverdue ? 'text-danger' : 'text-army-gold'}`}>
+                        {isInitial ? 'Initial counseling' : 'Quarterly counseling'}
+                        {' — '}
+                        {isOverdue
+                          ? `${alert.days} day${alert.days !== 1 ? 's' : ''} overdue`
+                          : `due in ${alert.days} day${alert.days !== 1 ? 's' : ''}`
+                        }
+                      </div>
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => navigate('/counseling/new')}
+                    className={`font-mono text-[10px] tracking-widest uppercase px-3 py-1.5 transition-colors flex-shrink-0 ${
+                      isOverdue
+                        ? 'border border-danger text-danger hover:bg-danger hover:text-bg'
+                        : 'border border-army-gold text-army-gold hover:bg-army-gold hover:text-bg'
+                    }`}
+                  >
+                    COUNSEL
+                  </button>
+                </div>
+              );
+            })}
+          </div>
+          <div className="font-mono text-[10px] text-army-muted mt-2">
+            Initial: within 30 days of assignment · Quarterly: every 90 days thereafter (AR 623-3)
+          </div>
+        </div>
+      )}
 
       {/* Quick Actions */}
       <div className="border-t border-border pt-6">
