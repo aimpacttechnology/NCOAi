@@ -33,21 +33,30 @@ export default function App() {
   const [loading, setLoading]       = useState(true);
 
   useEffect(() => {
-    const init = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-      const u = session?.user ?? null;
-      setUser(u);
-
-      if (u) {
+    const checkTerms = async (uid: string) => {
+      try {
         const { data } = await supabase
           .from('profiles')
           .select('terms_accepted_at')
-          .eq('id', u.id)
+          .eq('id', uid)
           .single();
         setTerms(!!data?.terms_accepted_at);
+      } catch {
+        setTerms(false);
       }
+    };
 
-      setLoading(false);
+    const init = async () => {
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        const u = session?.user ?? null;
+        setUser(u);
+        if (u) await checkTerms(u.id);
+      } catch {
+        // leave user null, loading will end
+      } finally {
+        setLoading(false);
+      }
     };
 
     init();
@@ -55,16 +64,8 @@ export default function App() {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_e, session) => {
       const u = session?.user ?? null;
       setUser(u);
-      if (u) {
-        const { data } = await supabase
-          .from('profiles')
-          .select('terms_accepted_at')
-          .eq('id', u.id)
-          .single();
-        setTerms(!!data?.terms_accepted_at);
-      } else {
-        setTerms(false);
-      }
+      if (u) await checkTerms(u.id);
+      else setTerms(false);
     });
 
     return () => subscription.unsubscribe();
